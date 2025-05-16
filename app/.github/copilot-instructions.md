@@ -1,0 +1,2 @@
+<!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
+Este proyecto utiliza FastAPI para el backend, Flet para el frontend y PostgreSQL como base de datos. Además, incluye Celery para tareas en segundo plano y Uvicorn como servidor ASGI. Por favor, genera código que respete esta arquitectura y asegúrate de mantener el backend, frontend y base de datos separados.
