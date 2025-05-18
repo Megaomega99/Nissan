@@ -95,16 +95,9 @@ backend/
 │   │   └── ml_tasks.py       # Tareas asíncronas Celery
 │   └── main.py               # Punto de entrada principal
 ├── Dockerfile
-├── requirements.txt
-└── alembic/                  # Migraciones DB
-```
-
-## Estructura del Frontend
+└── requirements.txt
 
 ```
-
-```
-
 ## Uso
 
 1. Crear una cuenta o iniciar sesión.
