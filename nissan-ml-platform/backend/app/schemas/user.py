@@ -2,7 +2,7 @@
 from typing import Optional
 from pydantic import BaseModel, EmailStr, Field, validator
 from datetime import datetime
-
+from enum import Enum 
 
 class UserBase(BaseModel):
     """Esquema base para usuarios con campos comunes."""
@@ -39,7 +39,7 @@ class UserInDB(UserBase):
     updated_at: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class UserResponse(UserBase):
@@ -47,7 +47,7 @@ class UserResponse(UserBase):
     id: int
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class Token(BaseModel):
@@ -97,7 +97,7 @@ class FileInDB(FileBase):
     updated_at: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class FileResponse(FileBase):
@@ -111,7 +111,7 @@ class FileResponse(FileBase):
     processing_status: str
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # backend/app/schemas/ml_model.py
@@ -158,7 +158,7 @@ class MLModelInDB(MLModelBase):
     updated_at: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class MLModelResponse(MLModelBase):
@@ -173,7 +173,7 @@ class MLModelResponse(MLModelBase):
     file_id: int
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class MLPrediction(BaseModel):

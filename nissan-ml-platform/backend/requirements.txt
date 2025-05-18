@@ -27,3 +27,4 @@ redis>=4.5.4
 # Logging y utilidades
 python-dotenv>=1.0.0
 tenacity>=8.2.2
+pydantic-settings>=2.0.0
