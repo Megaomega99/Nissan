@@ -5,7 +5,8 @@ from sqlalchemy.orm import relationship
 from typing import Optional, List, Any
 
 from app.core.database import Base
-
+import json
+from sqlalchemy.ext.hybrid import hybrid_property
 
 class File(Base):
     """
@@ -48,6 +49,28 @@ class File(Base):
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Store JSON as string in database
+    _columns = Column("columns", Text, nullable=True)
+    
+    # Add property to handle serialization/deserialization
+    @hybrid_property
+    def columns(self):
+        """Convert stored JSON string to Python list."""
+        if self._columns:
+            try:
+                return json.loads(self._columns)
+            except (json.JSONDecodeError, TypeError):
+                return []
+        return []
+    
+    @columns.setter
+    def columns(self, value):
+        """Convert Python list to JSON string for storage."""
+        if value is None:
+            self._columns = None
+        else:
+            self._columns = json.dumps(value)
     
     def __repr__(self) -> str:
         """String representation for debugging."""

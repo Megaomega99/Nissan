@@ -78,11 +78,11 @@ class FileService:
             # Leer archivo para obtener metadatos básicos
             try:
                 df = PreprocessingService.read_csv_file(file_path)
-                columns_json = json.dumps(df.columns.tolist())
+                columns_list = df.columns.tolist()  # Ensure this is a Python list
                 rows_count = len(df)
             except Exception as e:
-                logger.warning(f"Error al extraer metadatos del CSV: {str(e)}")
-                columns_json = "[]"
+                logger.warning(f"Error extracting metadata: {str(e)}")
+                columns_list = []
                 rows_count = 0
             
             # Crear registro en la base de datos
@@ -91,7 +91,7 @@ class FileService:
                 original_filename=original_filename,
                 file_path=file_path,
                 file_size=file_size,
-                columns=columns_json,
+                columns=columns_list,  # Store as Python list, hybrid property handles conversion
                 rows_count=rows_count,
                 user_id=user_id
             )
