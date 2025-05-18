@@ -1,0 +1,29 @@
+# backend/requirements.txt
+# FastAPI y dependencias
+fastapi>=0.95.0
+uvicorn>=0.21.1
+python-multipart>=0.0.6
+email-validator>=2.0.0
+pydantic>=1.10.7
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# Base de datos
+SQLAlchemy>=2.0.9
+psycopg2-binary>=2.9.6
+alembic>=1.10.3
+
+# Procesamiento de datos
+pandas>=2.0.0
+numpy>=1.24.2
+scikit-learn>=1.2.2
+matplotlib>=3.7.1
+joblib>=1.2.0
+
+# Tareas asíncronas
+celery>=5.2.7
+redis>=4.5.4
+
+# Logging y utilidades
+python-dotenv>=1.0.0
+tenacity>=8.2.2
