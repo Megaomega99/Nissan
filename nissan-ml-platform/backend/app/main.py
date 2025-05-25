@@ -8,6 +8,7 @@ import os
 from app.core.config import settings
 from app.api import auth, files, preprocessing, ml_models
 from app.core.database import Base, engine
+from app.models import user, file, ml_model
 
 # Configurar logging
 logging.basicConfig(
