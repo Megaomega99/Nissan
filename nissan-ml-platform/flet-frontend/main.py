@@ -23,6 +23,11 @@ def main(page: ft.Page):
     page.window_height = 700
     page.padding = 20
     page.scroll = "auto"
+    # Barra superior global con título
+    page.appbar = ft.AppBar(
+        title=ft.Text("Plataforma ML Nissan"),
+        center_title=True
+    )
     # Inicializa Snackbar sin contenido
     page.snack_bar = ft.SnackBar(ft.Text(""), open=False)
 
@@ -44,7 +49,7 @@ def main(page: ft.Page):
             page.clean()
             page.add(main_tabs(page))
         else:
-            show_message(page, "Error al iniciar sesión")
+            show_message(page, "Error al iniciar sesión", "red")
 
     def register(e):
         payload = {
@@ -57,7 +62,7 @@ def main(page: ft.Page):
         if resp.status_code == 201:
             show_message(page, "Registro exitoso, ya puedes iniciar sesión")
         else:
-            show_message(page, f"Error: {resp.text}")
+            show_message(page, f"Error: {resp.text}", "red")
 
     # UI login y registro
     page.add(
@@ -105,10 +110,26 @@ def perfil_view(page: ft.Page):
                 ft.Text(f"Nombre: {u['full_name']}", size=18),
             ]
         else:
-            container.controls = [ft.Text("Error al cargar perfil", color=ft.colors.RED)]
+            container.controls = [ft.Text("Error al cargar perfil", color="red")]
         page.update()
+
+    # Botón de Cerrar Sesión
+    def logout(e):
+        global token
+        token = None
+        show_message(page, "Sesión cerrada")
+        page.clean()
+        main(page)
+
     cargar_perfil()
-    return ft.Container(content=container, padding=20)
+    # Mostrar perfil y botón de cierre de sesión
+    return ft.Container(
+        content=ft.Column([
+            container,
+            ft.ElevatedButton("Cerrar Sesión", on_click=logout)
+        ], spacing=10),
+        padding=20
+    )
 
 
 def files_view(page: ft.Page):
@@ -125,9 +146,14 @@ def files_view(page: ft.Page):
         resp = requests.get(f"{BASE_URL}/files/list", headers=headers)
         if resp.status_code == 200:
             for f in resp.json():
-                list_view.controls.append(ft.ListTile(title=f['filename'], subtitle=f"ID: {f['id']}"))
+                list_view.controls.append(
+                    ft.ListTile(
+                        title=ft.Text(f['filename']),
+                        subtitle=ft.Text(f"ID: {f['id']}"),
+                    )
+                )
         else:
-            show_message(page, "Error al listar archivos")
+            show_message(page, "Error al listar archivos", "red")
         page.update()
 
     # Toolbar sin iconos para compatibilidad web
@@ -136,7 +162,12 @@ def files_view(page: ft.Page):
         ft.ElevatedButton("Refrescar lista", on_click=lambda e: refresh_files()),
     ])
     refresh_files()
-    return ft.Column([toolbar, list_view], expand=1, spacing=10)
+    # Empaquetar en Container
+    return ft.Container(
+        content=ft.Column([toolbar, list_view], expand=1, spacing=10),
+        padding=20,
+        expand=1
+    )
 
 
 def upload_file(e, page: ft.Page, list_view: ft.ListView, refresh_fn):
@@ -151,7 +182,7 @@ def upload_file(e, page: ft.Page, list_view: ft.ListView, refresh_fn):
             else:
                 file_bytes = file.read_bytes()
         except Exception:
-            show_message(page, "Error leyendo el archivo")
+            show_message(page, "Error leyendo el archivo", "red")
             return
         buf = io.BytesIO(file_bytes)
         files_param = {"file": (file.name, buf, "text/csv")}
@@ -162,9 +193,9 @@ def upload_file(e, page: ft.Page, list_view: ft.ListView, refresh_fn):
             # Recargar lista de archivos
             refresh_fn()
         else:
-            show_message(page, "Error al subir archivo")
+            show_message(page, "Error al subir archivo", "red")
     else:
-        show_message(page, "No se seleccionó ningún archivo", ft.colors.RED)
+        show_message(page, "No se seleccionó ningún archivo", "red")
 
 
 def preprocess_view(page: ft.Page):
@@ -216,7 +247,7 @@ def preprocess_view(page: ft.Page):
             table=[ft.Row([ft.Text(str(r[c])) for c in cols]) for r in records]
             result_panel.controls=[ft.Text("Preview:"),ft.Column(table)]
         else:
-            show_message(page,"Error en preprocesamiento")
+            show_message(page,"Error en preprocesamiento", "red")
         page.update()
 
     def analyze(e):
@@ -229,13 +260,17 @@ def preprocess_view(page: ft.Page):
             analysis=resp.json()
             result_panel.controls=[ft.Text(str(analysis))]
         else:
-            show_message(page,"Error en análisis")
+            show_message(page,"Error en análisis", "red")
         page.update()
 
     load_files()
     toolbar=ft.Row([file_dd,remove_nulls,fill_nulls,fill_method,drop_dups,remove_outliers],spacing=10)
     buttons=ft.Row([ft.ElevatedButton("Limpiar",on_click=clean_data),ft.ElevatedButton("Analizar",on_click=analyze)],spacing=10)
-    return ft.Column([toolbar,buttons,ft.Divider(),result_panel],expand=1,spacing=20)
+    return ft.Container(
+        content=ft.Column([toolbar, buttons, ft.Divider(), result_panel], expand=1, spacing=20),
+        padding=20,
+        expand=1
+    )
 
 
 def train_view(page: ft.Page):
@@ -267,7 +302,7 @@ def train_view(page: ft.Page):
 
     def train(e):
         if not file_dd.value or not target.value or not features.value:
-            show_message(page,"Complete todos los campos")
+            show_message(page,"Complete todos los campos", "red")
             return
         cols=[c.strip() for c in features.value.split(',')]
         payload={"file_id":int(file_dd.value),"model_type":model_dd.value,"target_column":target.value,"feature_columns":cols}
@@ -276,12 +311,16 @@ def train_view(page: ft.Page):
         if resp.status_code==202:
             show_message(page,"Entrenamiento iniciado")
         else:
-            show_message(page,"Error en entrenamiento")
+            show_message(page,"Error en entrenamiento", "red")
         page.update()
 
     load_files()
     toolbar=ft.Row([file_dd,model_dd,target,features],spacing=10)
-    return ft.Column([toolbar,ft.ElevatedButton("Entrenar",on_click=train),ft.Divider(),result_txt],expand=1,spacing=20)
+    return ft.Container(
+        content=ft.Column([toolbar, ft.ElevatedButton("Entrenar", on_click=train), ft.Divider(), result_txt], expand=1, spacing=20),
+        padding=20,
+        expand=1
+    )
 
 
 def models_view(page: ft.Page):
@@ -290,11 +329,21 @@ def models_view(page: ft.Page):
         headers={"Authorization":f"Bearer {token}"}
         resp=requests.get(f"{BASE_URL}/models/list",headers=headers)
         if resp.status_code==200:
-            list_view.controls=[ft.ListTile(title=f"ID:{m['model_id']} - {m['model_type']}",
-                on_click=lambda e,m=m: show_details(m['model_id'])) for m in resp.json()]
+            list_view.controls=[
+                ft.ListTile(
+                    title=f"ID:{m['model_id']} - {m['model_type']}",
+                    trailing=ft.TextButton(
+                        "Eliminar",
+                        on_click=lambda e, mid=m['model_id']: delete_model(mid),
+                        color="red"
+                    ),
+                    on_click=lambda e, mid=m['model_id']: show_details(mid)
+                )
+                for m in resp.json()
+            ]
             page.update()
         else:
-            show_message(page,"Error listando modelos")
+            show_message(page,"Error listando modelos", "red")
     def show_details(mid:int):
         headers={"Authorization":f"Bearer {token}"}
         resp=requests.get(f"{BASE_URL}/models/{mid}",headers=headers)
@@ -308,7 +357,11 @@ def models_view(page: ft.Page):
 
     toolbar=ft.Row([ft.ElevatedButton("Refrescar",on_click=lambda e: refresh())],spacing=10)
     refresh()
-    return ft.Column([toolbar,list_view],expand=1,spacing=10)
+    return ft.Container(
+        content=ft.Column([toolbar, list_view], expand=1, spacing=10),
+        padding=20,
+        expand=1
+    )
 
 
 def predict_view(page: ft.Page):
@@ -325,7 +378,7 @@ def predict_view(page: ft.Page):
             show_message(page,"Error cargando modelos")
     def predict(e):
         if not model_dd.value or not features.value:
-            show_message(page,"Seleccione modelo e ingrese valores")
+            show_message(page,"Seleccione modelo e ingrese valores", "red")
             return
         vals=[float(v) for v in features.value.split(',')]
         headers={"Authorization":f"Bearer {token}"}
@@ -333,11 +386,15 @@ def predict_view(page: ft.Page):
         if resp.status_code==200:
             result_txt.value=str(resp.json())
         else:
-            show_message(page,"Error en predicción")
+            show_message(page,"Error en predicción", "red")
         page.update()
 
     load_models()
-    return ft.Column([ft.Row([model_dd,features]),ft.ElevatedButton("Predecir",on_click=predict),ft.Divider(),result_txt],expand=1,spacing=20)
+    return ft.Container(
+        content=ft.Column([ft.Row([model_dd, features]), ft.ElevatedButton("Predecir", on_click=predict), ft.Divider(), result_txt], expand=1, spacing=20),
+        padding=20,
+        expand=1
+    )
 
 
 if __name__ == "__main__":
