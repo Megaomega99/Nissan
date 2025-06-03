@@ -16,7 +16,7 @@ Plataforma de Machine Learning para Nissan que permite a los usuarios subir arch
 
 Este proyecto sigue una arquitectura de microservicios con separación clara entre frontend, backend y base de datos:
 
-- **Frontend**: React con Material-UI
+- **Frontend**: Flet (Python)
 - **Backend**: FastAPI (Python)
 - **Base de datos**: PostgreSQL
 - **Tareas asíncronas**: Celery con Redis

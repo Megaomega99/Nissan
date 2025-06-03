@@ -1,0 +1,3 @@
+# requirements.txt para frontend Flet
+flet>=0.18.0
+requests

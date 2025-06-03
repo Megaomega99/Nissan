@@ -1,22 +1,6 @@
 version: '3.8'
 
 services:
-  # Frontend básico
-  frontend:
-    build:
-      context: ./frontend-basic
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend-basic:/app
-      - /app/node_modules
-    depends_on:
-      - backend
-    environment:
-      - NODE_ENV=development
-      - REACT_APP_API_URL=http://backend:8000/api/v1
-
   # Backend - FastAPI
   backend:
     build:
@@ -85,6 +69,18 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+
+  # Frontend Flet para pruebas de endpoints
+  flet-frontend:
+    build:
+      context: ./flet-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8501:8501"
+    depends_on:
+      - backend
+    environment:
+      - API_URL=http://backend:8000/api/v1
 
 volumes:
   postgres_data:
