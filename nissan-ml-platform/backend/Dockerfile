@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
 # Copiar requerimientos e instalar dependencias
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir bcrypt
 
 # Copiar código de la aplicación
 COPY . .

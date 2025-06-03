@@ -7,6 +7,7 @@ email-validator>=2.0.0
 pydantic>=1.10.7
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
+bcrypt>=4.0.1
 
 # Base de datos
 SQLAlchemy>=2.0.9
