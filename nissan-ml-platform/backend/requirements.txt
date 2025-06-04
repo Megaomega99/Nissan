@@ -1,31 +1,32 @@
 # backend/requirements.txt
-# FastAPI y dependencias
+# FastAPI and dependencies
 fastapi>=0.95.0
 uvicorn>=0.21.1
 python-multipart>=0.0.6
 email-validator>=2.0.0
 pydantic>=1.10.7
 python-jose[cryptography]>=3.3.0
+# Fix bcrypt compatibility issue by pinning versions
 passlib[bcrypt]>=1.7.4
-bcrypt>=4.0.1
+bcrypt==4.0.1  # Pin to compatible version
 
-# Base de datos
+# Database
 SQLAlchemy>=2.0.9
 psycopg2-binary>=2.9.6
 alembic>=1.10.3
 
-# Procesamiento de datos
+# Data processing
 pandas>=2.0.0
 numpy>=1.24.2
 scikit-learn>=1.2.2
 matplotlib>=3.7.1
 joblib>=1.2.0
 
-# Tareas asíncronas
+# Asynchronous tasks
 celery>=5.2.7
 redis>=4.5.4
 
-# Logging y utilidades
+# Logging and utilities
 python-dotenv>=1.0.0
 tenacity>=8.2.2
 pydantic-settings>=2.0.0
