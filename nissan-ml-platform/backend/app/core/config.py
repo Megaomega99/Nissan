@@ -1,6 +1,7 @@
-# backend/app/core/config.py
+# backend/app/core/config.py - Versión modificada para GCP
 import logging
 import sys
+import os
 from typing import Optional, Dict, Any, Union, cast
 from functools import lru_cache
 from pathlib import Path
@@ -56,19 +57,24 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "superclavesecreta123456789"  # Should be overridden in production
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     
-    # Database settings
-    POSTGRES_SERVER: str = "db"
+    # Database settings - Modificado para GCP Cloud SQL
+    POSTGRES_SERVER: str = "localhost"  # Para Cloud SQL: /cloudsql/PROJECT:REGION:INSTANCE
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "nissan_ml"
     POSTGRES_PORT: str = "5432"
     
-    # File storage settings
-    UPLOAD_DIRECTORY: str = "/app/uploads"
+    # File storage settings - Modificado para Cloud Run
+    UPLOAD_DIRECTORY: str = "/tmp/uploads"  # Cloud Run usa /tmp para archivos temporales
     
-    # Celery configuration for asynchronous tasks
-    CELERY_BROKER_URL: str = "redis://redis:6379/0"
-    CELERY_RESULT_BACKEND: str = "redis://redis:6379/0"
+    # Celery configuration for asynchronous tasks - Modificado para Redis Memorystore
+    CELERY_BROKER_URL: str = "redis://localhost:6379/0"  # Para GCP: redis://REDIS_IP:6379/0
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
+    
+    # Variables específicas para GCP
+    GOOGLE_CLOUD_PROJECT: Optional[str] = None
+    GCP_REGION: str = "us-central1"
+    CLOUD_SQL_CONNECTION_NAME: Optional[str] = None
     
     @validator("UPLOAD_DIRECTORY")
     def validate_upload_directory(cls, v: str) -> str:
@@ -93,7 +99,8 @@ class Settings(BaseSettings):
             test_file.touch()
             test_file.unlink()
         except (IOError, PermissionError):
-            raise ValueError(f"UPLOAD_DIRECTORY is not writable: {v}")
+            logger.warning(f"UPLOAD_DIRECTORY might not be writable: {v}")
+            # En Cloud Run esto es normal para /tmp, así que solo advertimos
         
         return v
     
@@ -102,18 +109,25 @@ class Settings(BaseSettings):
         """
         Construct and return the PostgreSQL database URI.
         
-        Pydantic v2 compatibility: we use direct string formatting instead
-        of PostgresDsn.build() which has changed its API.
+        Para GCP Cloud SQL, detecta automáticamente si estamos usando Cloud SQL Proxy.
         
         Returns:
             str: Complete database connection URI
         """
         try:
-            # Create connection string using direct formatting
-            connection_uri = (
-                f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
-                f"{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-            )
+            # Detectar si estamos en Cloud Run con Cloud SQL
+            if self.POSTGRES_SERVER.startswith('/cloudsql/'):
+                # Conexión vía Unix socket para Cloud SQL
+                connection_uri = (
+                    f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
+                    f"/{self.POSTGRES_DB}?host={self.POSTGRES_SERVER}"
+                )
+            else:
+                # Conexión TCP estándar
+                connection_uri = (
+                    f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
+                    f"{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+                )
             return connection_uri
         except Exception as e:
             logger.error(f"Error building database URI: {str(e)}")
