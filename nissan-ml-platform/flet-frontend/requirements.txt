@@ -1,4 +1,0 @@
-# requirements.txt para frontend Flet
-flet>=0.18.0
-requests>=2.28.0
-plotly>=5.10.0
