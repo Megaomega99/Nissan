@@ -191,6 +191,34 @@ const Dashboard = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* Model Performance Summary */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24}>
+          <Card title="Best Performing Models" className="dashboard-card">
+            {stats.models > 0 ? (
+              <div>
+                <Typography.Text>
+                  You have <strong>{stats.models}</strong> ML models, with <strong>{stats.predictions}</strong> trained models ready for predictions.
+                </Typography.Text>
+                <div style={{ marginTop: 16 }}>
+                  <Typography.Text type="secondary">
+                    Visit the Models page to view detailed performance metrics and create new models. 
+                    Use the Predictions page to generate SOH forecasts and analyze threshold crossings.
+                  </Typography.Text>
+                </div>
+              </div>
+            ) : (
+              <Alert
+                message="No ML Models Created"
+                description="Create your first ML model to start predicting battery health trends. Go to the Models page to get started."
+                type="info"
+                showIcon
+              />
+            )}
+          </Card>
+        </Col>
+      </Row>
     </div>
   );
 };

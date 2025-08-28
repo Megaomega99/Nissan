@@ -11,7 +11,7 @@ from ..models.user import User
 from ..models.ml_model import MLModel
 from ..models.prediction import Prediction
 from ..models.battery_data import BatteryData
-from ..ml.models import ModelTrainer, predict_battery_failure
+from ..ml.models import ModelTrainer, predict_soh_forecast, calculate_model_metrics
 from .auth import get_current_user
 
 router = APIRouter()
@@ -350,3 +350,207 @@ async def get_prediction_history(
     ).order_by(Prediction.prediction_timestamp.desc()).limit(limit).all()
     
     return predictions
+
+class SOHForecastRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
+    model_id: int
+    prediction_steps: int = 365
+    time_step_days: int = 1
+
+class SOHForecastResponse(BaseModel):
+    timestamps: List[str]
+    predictions: List[float]
+    current_soh: float
+    threshold_crossings: Dict[str, Any]
+    prediction_steps: int
+    time_step_days: int
+    total_forecast_days: int
+
+class ModelMetricsResponse(BaseModel):
+    model_id: int
+    mse: float | None
+    rmse: float | None
+    mae: float | None
+    r2_score: float | None
+    mape: float | None
+    mean_residual: float | None
+    std_residual: float | None
+    min_prediction: float | None
+    max_prediction: float | None
+    mean_prediction: float | None
+
+@router.post("/soh-forecast", response_model=SOHForecastResponse)
+async def forecast_soh(
+    request: SOHForecastRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Get and validate model
+    ml_model = db.query(MLModel).filter(
+        MLModel.id == request.model_id,
+        MLModel.user_id == current_user.id
+    ).first()
+    
+    if not ml_model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model not found"
+        )
+    
+    if not ml_model.is_trained:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Model is not trained yet"
+        )
+    
+    try:
+        # Get recent battery data for forecasting context
+        recent_data = db.query(BatteryData).filter(
+            BatteryData.vehicle_id == ml_model.vehicle_id
+        ).order_by(BatteryData.measurement_timestamp.desc()).limit(50).all()
+        
+        if not recent_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No battery data available for forecasting"
+            )
+        
+        # Convert to DataFrame
+        data_dicts = []
+        for data in reversed(recent_data):  # Reverse to get chronological order
+            data_dict = {
+                'state_of_health': data.state_of_health,
+                'state_of_charge': data.state_of_charge,
+                'voltage': data.voltage,
+                'current': data.current,
+                'temperature': data.temperature,
+                'cycle_count': data.cycle_count,
+                'capacity_fade': data.capacity_fade,
+                'internal_resistance': data.internal_resistance,
+                'measurement_timestamp': data.measurement_timestamp
+            }
+            data_dicts.append(data_dict)
+        
+        df = pd.DataFrame(data_dicts)
+        
+        # Load the trained model
+        trainer = ModelTrainer()
+        model_data = trainer.load_model(ml_model.model_file_path, ml_model.model_type)
+        
+        if ml_model.model_type in ["rnn", "gru"]:
+            model = model_data
+        else:
+            model = model_data['model']
+        
+        # Generate SOH forecast
+        forecast_result = predict_soh_forecast(
+            model, 
+            df, 
+            prediction_steps=request.prediction_steps,
+            time_step_days=request.time_step_days
+        )
+        
+        if 'error' in forecast_result:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Forecasting failed: {forecast_result['error']}"
+            )
+        
+        return SOHForecastResponse(**forecast_result)
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"SOH forecasting failed: {str(e)}"
+        )
+
+@router.get("/metrics/{model_id}", response_model=ModelMetricsResponse)
+async def get_model_metrics(
+    model_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Get and validate model
+    ml_model = db.query(MLModel).filter(
+        MLModel.id == model_id,
+        MLModel.user_id == current_user.id
+    ).first()
+    
+    if not ml_model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model not found"
+        )
+    
+    if not ml_model.is_trained:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Model is not trained yet"
+        )
+    
+    try:
+        # Get battery data for evaluation
+        battery_data = db.query(BatteryData).filter(
+            BatteryData.vehicle_id == ml_model.vehicle_id
+        ).all()
+        
+        if len(battery_data) < 10:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Not enough data for metrics calculation"
+            )
+        
+        # Convert to DataFrame
+        data_dicts = []
+        for data in battery_data:
+            data_dict = {
+                'state_of_health': data.state_of_health,
+                'state_of_charge': data.state_of_charge,
+                'voltage': data.voltage,
+                'current': data.current,
+                'temperature': data.temperature,
+                'cycle_count': data.cycle_count,
+                'capacity_fade': data.capacity_fade,
+                'internal_resistance': data.internal_resistance,
+                'measurement_timestamp': data.measurement_timestamp
+            }
+            data_dicts.append(data_dict)
+        
+        df = pd.DataFrame(data_dicts)
+        
+        # Load the trained model
+        trainer = ModelTrainer()
+        model_data = trainer.load_model(ml_model.model_file_path, ml_model.model_type)
+        
+        if ml_model.model_type in ["rnn", "gru"]:
+            model = model_data
+        else:
+            model = model_data['model']
+        
+        # Prepare test data (use last 20% of data)
+        test_size = max(2, len(df) // 5)
+        df_test = df.tail(test_size)
+        
+        # Prepare features and target
+        feature_columns = ml_model.feature_columns or [
+            col for col in df.columns 
+            if col not in ['state_of_health', 'measurement_timestamp']
+        ]
+        
+        X_test = df_test[feature_columns].fillna(0)
+        y_test = df_test['state_of_health']
+        
+        # Calculate metrics
+        metrics = calculate_model_metrics(model, X_test, y_test)
+        
+        return ModelMetricsResponse(
+            model_id=model_id,
+            **metrics
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Metrics calculation failed: {str(e)}"
+        )

@@ -95,6 +95,8 @@ export const predictionAPI = {
   makePrediction: (data) => api.post('/predictions/predict', data),
   getFailureAnalysis: (data) => api.post('/predictions/failure-analysis', data),
   getTimeSeriesPrediction: (data) => api.post('/predictions/time-series', data),
+  getSOHForecast: (data) => api.post('/predictions/soh-forecast', data),
+  getModelMetrics: (modelId) => api.get(`/predictions/metrics/${modelId}`),
   getPredictionHistory: (modelId, limit = 50) => 
     api.get(`/predictions/history/${modelId}`, { params: { limit } }),
 };

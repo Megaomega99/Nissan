@@ -76,7 +76,7 @@ async def create_ml_model(
         )
     
     # Validate model type
-    valid_types = ["linear", "polynomial", "svm", "sgd", "neural_network", "rnn"]
+    valid_types = ["linear", "polynomial", "svm", "sgd", "neural_network", "rnn", "gru", "random_forest", "perceptron"]
     if model_data.model_type not in valid_types:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
