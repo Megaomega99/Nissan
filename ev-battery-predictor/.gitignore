@@ -107,3 +107,19 @@ htmlcov/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Test files and scripts (additional rules)
+test_*.py
+test_*.sh
+test-*.ps1
+test_*.csv
+*test*.json
+STATUS_*.md
+TROUBLESHOOTING.md
+SOLUCION_PROBLEMAS.md
+docker-manage.ps1
+database/
+
+# Temporary documentation files
+*.tmp.md
+*.backup.md
