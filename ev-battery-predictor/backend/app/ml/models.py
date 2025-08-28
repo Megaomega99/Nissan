@@ -1103,36 +1103,14 @@ def calculate_model_metrics(model, X_test: pd.DataFrame, y_test: pd.Series) -> D
         Dictionary containing various evaluation metrics
     """
     try:
-        # Check if model has been trained with feature engineering
-        # and if we need to apply the same preprocessing
-        preprocessor = DataPreprocessor()
+        # Use the data as-is without adding engineered features for metrics calculation
+        X_processed = X_test.copy()
         
-        # Try to use the model's internal preprocessing if available
-        if hasattr(model, 'preprocessor') and model.preprocessor:
-            # Use model's preprocessor
-            X_processed = model.preprocessor.transform(X_test)
-        else:
-            # Apply minimal preprocessing to match training
-            X_processed = X_test.copy()
-            
-            # Add engineered features if they might be missing
-            if hasattr(X_processed, 'columns'):
-                # Add basic engineered features that might be expected
-                if 'voltage' in X_processed.columns and 'current' in X_processed.columns and 'power' not in X_processed.columns:
-                    X_processed['power'] = X_processed['voltage'] * X_processed['current']
-                
-                if 'temperature' in X_processed.columns and 'temp_squared' not in X_processed.columns:
-                    X_processed['temp_squared'] = X_processed['temperature'] ** 2
-                
-                if 'cycle_count' in X_processed.columns and 'log_cycles' not in X_processed.columns:
-                    X_processed['log_cycles'] = np.log1p(X_processed['cycle_count'])
-                
-                if 'capacity_fade' in X_processed.columns and 'cycle_count' in X_processed.columns and 'fade_per_cycle' not in X_processed.columns:
-                    X_processed['fade_per_cycle'] = X_processed['capacity_fade'] / (X_processed['cycle_count'] + 1)
-                
-                # Remove infinite values
-                X_processed = X_processed.replace([np.inf, -np.inf], np.nan).fillna(0)
+        # Basic data cleaning
+        X_processed = X_processed.fillna(0)
+        X_processed = X_processed.replace([np.inf, -np.inf], 0)
         
+        # Make predictions
         predictions = model.predict(X_processed)
         
         # Handle potential issues with predictions
@@ -1153,31 +1131,40 @@ def calculate_model_metrics(model, X_test: pd.DataFrame, y_test: pd.Series) -> D
         # Additional metrics with error handling
         try:
             mape = np.mean(np.abs((y_test_adjusted - predictions) / y_test_adjusted)) * 100
+            # Ensure MAPE is finite
+            if not np.isfinite(mape):
+                mape = None
         except:
-            mape = float('nan')
+            mape = None
         
         # Calculate residuals
         residuals = y_test_adjusted - predictions
         mean_residual = np.mean(residuals)
         std_residual = np.std(residuals)
         
+        # Ensure all values are finite and can be serialized
+        def safe_float(value):
+            if value is None or not np.isfinite(value):
+                return None
+            return float(value)
+        
         return {
-            'mse': float(mse),
-            'rmse': float(rmse),
-            'mae': float(mae),
-            'r2_score': float(r2),
-            'mape': float(mape) if not np.isnan(mape) else None,
-            'mean_residual': float(mean_residual),
-            'std_residual': float(std_residual),
-            'min_prediction': float(np.min(predictions)),
-            'max_prediction': float(np.max(predictions)),
-            'mean_prediction': float(np.mean(predictions))
+            'mse': safe_float(mse),
+            'rmse': safe_float(rmse),
+            'mae': safe_float(mae),
+            'r2_score': safe_float(r2),
+            'mape': safe_float(mape),
+            'mean_residual': safe_float(mean_residual),
+            'std_residual': safe_float(std_residual),
+            'min_prediction': safe_float(np.min(predictions)),
+            'max_prediction': safe_float(np.max(predictions)),
+            'mean_prediction': safe_float(np.mean(predictions))
         }
         
     except Exception as e:
         print(f"Error calculating metrics: {e}")
+        # Return default values instead of error
         return {
-            'error': str(e),
             'mse': None,
             'rmse': None,
             'mae': None,

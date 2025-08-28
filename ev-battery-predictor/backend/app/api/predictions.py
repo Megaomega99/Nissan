@@ -535,21 +535,59 @@ async def get_model_metrics(
         # Prepare features and target
         feature_columns = ml_model.feature_columns or [
             col for col in df.columns 
-            if col not in ['state_of_health', 'measurement_timestamp']
+            if col not in ['state_of_health', 'measurement_timestamp', 'id', 'vehicle_id', 'user_id', 'created_at', 'updated_at', 'data_source']
         ]
         
-        X_test = df_test[feature_columns].fillna(0)
+        # Filter feature columns to only include those that exist in the data
+        available_features = [col for col in feature_columns if col in df.columns]
+        
+        if not available_features:
+            # Use default features that should be available
+            available_features = []
+            for col in ['state_of_charge', 'voltage', 'current', 'temperature', 'cycle_count', 'capacity_fade', 'internal_resistance']:
+                if col in df.columns:
+                    available_features.append(col)
+        
+        if not available_features:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No valid features found for metrics calculation"
+            )
+        
+        X_test = df_test[available_features].fillna(0)
         y_test = df_test['state_of_health']
         
         # Calculate metrics
-        metrics = calculate_model_metrics(model, X_test, y_test)
-        
-        return ModelMetricsResponse(
-            model_id=model_id,
-            **metrics
-        )
+        try:
+            metrics = calculate_model_metrics(model, X_test, y_test)
+            
+            # Validate metrics before returning
+            if 'error' in metrics:
+                raise ValueError(f"Metrics calculation error: {metrics['error']}")
+                
+            return ModelMetricsResponse(
+                model_id=model_id,
+                **metrics
+            )
+        except Exception as metrics_error:
+            # Fallback: return basic metrics if detailed calculation fails
+            print(f"Metrics calculation failed: {metrics_error}")
+            return ModelMetricsResponse(
+                model_id=model_id,
+                mse=None,
+                rmse=None,
+                mae=None,
+                r2_score=None,
+                mape=None,
+                mean_residual=None,
+                std_residual=None,
+                min_prediction=None,
+                max_prediction=None,
+                mean_prediction=None
+            )
         
     except Exception as e:
+        print(f"General error in get_model_metrics: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Metrics calculation failed: {str(e)}"

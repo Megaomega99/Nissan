@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Typography,
@@ -42,9 +42,9 @@ const VehicleDetail = () => {
     if (id) {
       loadVehicleDetails();
     }
-  }, [id]);
+  }, [id, loadVehicleDetails]);
 
-  const loadVehicleDetails = async () => {
+  const loadVehicleDetails = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -68,7 +68,7 @@ const VehicleDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   const handleDeleteVehicle = async () => {
     try {

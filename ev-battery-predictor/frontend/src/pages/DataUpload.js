@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Typography,
   Card,
@@ -13,7 +13,6 @@ import {
   Col,
   Alert,
   message,
-  Divider,
   Space,
   Table,
   Tag,
@@ -30,8 +29,7 @@ import { vehicleAPI, batteryDataAPI } from '../services/api';
 import { handleApiError } from '../utils/errorHandling';
 import moment from 'moment';
 
-const { Title, Text } = Typography;
-const { TextArea } = Input;
+const { Title } = Typography;
 const { Dragger } = Upload;
 
 const DataUpload = () => {
@@ -44,15 +42,15 @@ const DataUpload = () => {
 
   useEffect(() => {
     loadVehicles();
-  }, []);
+  }, [loadVehicles]);
 
   useEffect(() => {
     if (selectedVehicle) {
       loadRecentData();
     }
-  }, [selectedVehicle]);
+  }, [selectedVehicle, loadRecentData]);
 
-  const loadVehicles = async () => {
+  const loadVehicles = useCallback(async () => {
     try {
       const response = await vehicleAPI.getVehicles();
       setVehicles(response.data);
@@ -63,16 +61,16 @@ const DataUpload = () => {
       const errorMsg = handleApiError(error, 'Failed to load vehicles');
       message.error(errorMsg.error);
     }
-  };
+  }, [selectedVehicle]);
 
-  const loadRecentData = async () => {
+  const loadRecentData = useCallback(async () => {
     try {
       const response = await batteryDataAPI.getBatteryData(selectedVehicle, { limit: 10 });
       setRecentData(response.data);
     } catch (error) {
       console.error('Failed to load recent data:', error);
     }
-  };
+  }, [selectedVehicle]);
 
   const handleManualSubmit = async (values) => {
     try {

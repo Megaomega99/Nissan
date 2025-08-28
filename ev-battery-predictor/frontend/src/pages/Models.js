@@ -16,7 +16,8 @@ import {
   Progress,
   Tooltip,
   Popconfirm,
-  message
+  message,
+  Statistic
 } from 'antd';
 import { 
   ExperimentOutlined, 
