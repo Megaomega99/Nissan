@@ -38,12 +38,6 @@ const VehicleDetail = () => {
   const [models, setModels] = useState([]);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (id) {
-      loadVehicleDetails();
-    }
-  }, [id, loadVehicleDetails]);
-
   const loadVehicleDetails = useCallback(async () => {
     try {
       setLoading(true);
@@ -69,6 +63,12 @@ const VehicleDetail = () => {
       setLoading(false);
     }
   }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      loadVehicleDetails();
+    }
+  }, [id, loadVehicleDetails]);
 
   const handleDeleteVehicle = async () => {
     try {

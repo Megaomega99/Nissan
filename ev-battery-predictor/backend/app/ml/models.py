@@ -533,7 +533,8 @@ class RNNWrapper:
         
         X_seq, _ = self._create_sequences(X_scaled, np.zeros(len(X_scaled)))
         
-        predictions_scaled = self.model.predict(X_seq[-1:], verbose=0)
+        # Predict for all sequences, not just the last one
+        predictions_scaled = self.model.predict(X_seq, verbose=0)
         predictions = self.scaler_y.inverse_transform(predictions_scaled.reshape(-1, 1)).flatten()
         
         return predictions
@@ -541,11 +542,14 @@ class RNNWrapper:
     def score(self, X, y):
         predictions = self.predict(X)
         if len(predictions) != len(y):
-            # Adjust for sequence prediction
-            y_adjusted = y[-len(predictions):]
+            # Adjust for sequence prediction - use the last part of y that corresponds to predictions
+            min_len = min(len(predictions), len(y))
+            y_adjusted = y[-min_len:] if hasattr(y, '__getitem__') else y.iloc[-min_len:]
+            predictions_adjusted = predictions[-min_len:]
         else:
             y_adjusted = y
-        return r2_score(y_adjusted, predictions)
+            predictions_adjusted = predictions
+        return r2_score(y_adjusted, predictions_adjusted)
 
 class PerceptronWrapper:
     """Wrapper for Perceptron with regression capabilities"""
@@ -559,6 +563,11 @@ class PerceptronWrapper:
         self.scaler_y = StandardScaler()
         
     def fit(self, X, y):
+        # Convert to numpy arrays if needed
+        if hasattr(y, 'values'):
+            y = y.values
+        y = np.array(y)
+        
         # Scale data
         X_scaled = self.scaler_X.fit_transform(X)
         y_scaled = self.scaler_y.fit_transform(y.reshape(-1, 1)).flatten()
@@ -725,7 +734,8 @@ class GRUWrapper:
         
         X_seq, _ = self._create_sequences(X_scaled, np.zeros(len(X_scaled)))
         
-        predictions_scaled = self.model.predict(X_seq[-1:], verbose=0)
+        # Predict for all sequences, not just the last one
+        predictions_scaled = self.model.predict(X_seq, verbose=0)
         predictions = self.scaler_y.inverse_transform(predictions_scaled.reshape(-1, 1)).flatten()
         
         return predictions
@@ -733,11 +743,14 @@ class GRUWrapper:
     def score(self, X, y):
         predictions = self.predict(X)
         if len(predictions) != len(y):
-            # Adjust for sequence prediction
-            y_adjusted = y[-len(predictions):]
+            # Adjust for sequence prediction - use the last part of y that corresponds to predictions
+            min_len = min(len(predictions), len(y))
+            y_adjusted = y[-min_len:] if hasattr(y, '__getitem__') else y.iloc[-min_len:]
+            predictions_adjusted = predictions[-min_len:]
         else:
             y_adjusted = y
-        return r2_score(y_adjusted, predictions)
+            predictions_adjusted = predictions
+        return r2_score(y_adjusted, predictions_adjusted)
 
 class ModelTrainer:
     """Class for training and evaluating models"""
@@ -1090,7 +1103,7 @@ def predict_soh_forecast(model, last_data_points: pd.DataFrame,
             'prediction_steps': 0
         }
 
-def calculate_model_metrics(model, X_test: pd.DataFrame, y_test: pd.Series) -> Dict[str, float]:
+def calculate_model_metrics(model, X_test: pd.DataFrame, y_test: pd.Series, scaler=None) -> Dict[str, float]:
     """
     Calculate comprehensive evaluation metrics for a trained model
     
@@ -1098,43 +1111,87 @@ def calculate_model_metrics(model, X_test: pd.DataFrame, y_test: pd.Series) -> D
         model: Trained model
         X_test: Test features
         y_test: Test targets
+        scaler: Optional scaler used during training
         
     Returns:
         Dictionary containing various evaluation metrics
     """
     try:
-        # Use the data as-is without adding engineered features for metrics calculation
+        print(f"Calculating metrics for {len(X_test)} test samples with {X_test.shape[1]} features")
+        
+        # Prepare the data
         X_processed = X_test.copy()
         
         # Basic data cleaning
         X_processed = X_processed.fillna(0)
         X_processed = X_processed.replace([np.inf, -np.inf], 0)
         
-        # Make predictions
-        predictions = model.predict(X_processed)
+        # Ensure y_test is clean too
+        y_test_clean = y_test.copy()
+        y_test_clean = y_test_clean.fillna(y_test_clean.median())
         
-        # Handle potential issues with predictions
-        if len(predictions) != len(y_test):
-            # Handle sequence models that might return fewer predictions
-            min_len = min(len(predictions), len(y_test))
-            predictions = predictions[-min_len:] if len(predictions) > min_len else predictions
-            y_test_adjusted = y_test.iloc[-min_len:] if len(y_test) > min_len else y_test
+        print(f"Data preprocessing complete. X shape: {X_processed.shape}, y shape: {y_test_clean.shape}")
+        
+        # Apply scaling if the model needs it
+        models_needing_scaling = ['SVR', 'SGDRegressor', 'MLPRegressor', 'PerceptronWrapper']
+        model_class_name = type(model).__name__
+        
+        if model_class_name in models_needing_scaling and scaler is not None:
+            print("Applying scaling to test data...")
+            X_for_prediction = scaler.transform(X_processed)
         else:
-            y_test_adjusted = y_test
+            X_for_prediction = X_processed
         
-        # Basic regression metrics
+        # Make predictions with error handling
+        print("Making predictions...")
+        predictions = model.predict(X_for_prediction)
+        
+        # Handle NaN predictions
+        if np.any(np.isnan(predictions)):
+            print("Warning: Found NaN predictions, replacing with target median")
+            predictions = np.nan_to_num(predictions, nan=np.median(y_test_clean))
+        
+        # Handle infinite predictions
+        if np.any(np.isinf(predictions)):
+            print("Warning: Found infinite predictions, clipping to valid range")
+            predictions = np.clip(predictions, 0, 100)
+        
+        print(f"Predictions generated: min={np.min(predictions):.2f}, max={np.max(predictions):.2f}, mean={np.mean(predictions):.2f}")
+        
+        # Handle potential issues with prediction length (for sequence models)
+        if len(predictions) != len(y_test_clean):
+            print(f"Warning: Prediction length mismatch: {len(predictions)} vs {len(y_test_clean)}")
+            min_len = min(len(predictions), len(y_test_clean))
+            predictions = predictions[-min_len:] if len(predictions) > min_len else predictions
+            y_test_adjusted = y_test_clean.iloc[-min_len:] if len(y_test_clean) > min_len else y_test_clean
+        else:
+            y_test_adjusted = y_test_clean
+        
+        print(f"Final data shapes - predictions: {len(predictions)}, y_test: {len(y_test_adjusted)}")
+        
+        # Ensure we have valid data for calculation
+        if len(predictions) == 0 or len(y_test_adjusted) == 0:
+            raise ValueError("No valid data for metrics calculation")
+        
+        # Calculate basic regression metrics
+        print("Calculating regression metrics...")
         mse = mean_squared_error(y_test_adjusted, predictions)
-        rmse = np.sqrt(mse)
+        rmse = np.sqrt(mse) if mse >= 0 else 0
         mae = mean_absolute_error(y_test_adjusted, predictions)
         r2 = r2_score(y_test_adjusted, predictions)
         
-        # Additional metrics with error handling
+        # Calculate MAPE with better error handling
+        mape = None
         try:
-            mape = np.mean(np.abs((y_test_adjusted - predictions) / y_test_adjusted)) * 100
-            # Ensure MAPE is finite
-            if not np.isfinite(mape):
-                mape = None
-        except:
+            # Avoid division by zero
+            mask = y_test_adjusted != 0
+            if np.any(mask):
+                mape = np.mean(np.abs((y_test_adjusted[mask] - predictions[mask]) / y_test_adjusted[mask])) * 100
+                # Ensure MAPE is reasonable
+                if not np.isfinite(mape) or mape > 1000:
+                    mape = None
+        except Exception as mape_error:
+            print(f"MAPE calculation failed: {mape_error}")
             mape = None
         
         # Calculate residuals
@@ -1144,11 +1201,13 @@ def calculate_model_metrics(model, X_test: pd.DataFrame, y_test: pd.Series) -> D
         
         # Ensure all values are finite and can be serialized
         def safe_float(value):
-            if value is None or not np.isfinite(value):
+            if value is None:
+                return None
+            if not np.isfinite(value):
                 return None
             return float(value)
         
-        return {
+        metrics = {
             'mse': safe_float(mse),
             'rmse': safe_float(rmse),
             'mae': safe_float(mae),
@@ -1161,9 +1220,19 @@ def calculate_model_metrics(model, X_test: pd.DataFrame, y_test: pd.Series) -> D
             'mean_prediction': safe_float(np.mean(predictions))
         }
         
+        print(f"Metrics calculated successfully:")
+        for key, value in metrics.items():
+            if value is not None:
+                print(f"  {key}: {value}")
+        
+        return metrics
+        
     except Exception as e:
-        print(f"Error calculating metrics: {e}")
-        # Return default values instead of error
+        print(f"Error calculating metrics: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Return None values with error information
         return {
             'mse': None,
             'rmse': None,
@@ -1174,5 +1243,6 @@ def calculate_model_metrics(model, X_test: pd.DataFrame, y_test: pd.Series) -> D
             'std_residual': None,
             'min_prediction': None,
             'max_prediction': None,
-            'mean_prediction': None
+            'mean_prediction': None,
+            'error': str(e)
         }

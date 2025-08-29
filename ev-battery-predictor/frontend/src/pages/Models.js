@@ -57,16 +57,6 @@ const Models = () => {
     { value: 'gru', label: 'GRU', description: 'Gated Recurrent Unit for time series' }
   ];
 
-  useEffect(() => {
-    loadVehicles();
-  }, []);
-
-  useEffect(() => {
-    if (selectedVehicle) {
-      loadModels(selectedVehicle);
-    }
-  }, [selectedVehicle]);
-
   const loadVehicles = async () => {
     try {
       const response = await vehicleAPI.getVehicles();
@@ -92,6 +82,16 @@ const Models = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadVehicles();
+  }, []);
+
+  useEffect(() => {
+    if (selectedVehicle) {
+      loadModels(selectedVehicle);
+    }
+  }, [selectedVehicle]);
 
   const handleCreateModel = async (values) => {
     try {
@@ -418,20 +418,34 @@ const Models = () => {
                 <Card size="small">
                   <Statistic 
                     title="R² Score" 
-                    value={selectedModelMetrics.r2_score} 
-                    precision={4}
-                    valueStyle={{ color: selectedModelMetrics.r2_score > 0.8 ? '#52c41a' : '#fa8c16' }}
+                    value={selectedModelMetrics.r2_score || 'N/A'} 
+                    precision={selectedModelMetrics.r2_score ? 4 : 0}
+                    valueStyle={{ 
+                      color: selectedModelMetrics.r2_score ? 
+                        (selectedModelMetrics.r2_score > 0.8 ? '#52c41a' : '#fa8c16') : 
+                        '#999'
+                    }}
                   />
+                  {!selectedModelMetrics.r2_score && (
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      Calculation failed
+                    </Text>
+                  )}
                 </Card>
               </Col>
               <Col span={12}>
                 <Card size="small">
                   <Statistic 
                     title="RMSE" 
-                    value={selectedModelMetrics.rmse} 
-                    precision={4}
-                    valueStyle={{ color: '#1890ff' }}
+                    value={selectedModelMetrics.rmse || 'N/A'} 
+                    precision={selectedModelMetrics.rmse ? 4 : 0}
+                    valueStyle={{ color: selectedModelMetrics.rmse ? '#1890ff' : '#999' }}
                   />
+                  {!selectedModelMetrics.rmse && (
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      Calculation failed
+                    </Text>
+                  )}
                 </Card>
               </Col>
             </Row>
@@ -441,23 +455,44 @@ const Models = () => {
                 <Card size="small">
                   <Statistic 
                     title="MAE" 
-                    value={selectedModelMetrics.mae} 
-                    precision={4}
-                    valueStyle={{ color: '#722ed1' }}
+                    value={selectedModelMetrics.mae || 'N/A'} 
+                    precision={selectedModelMetrics.mae ? 4 : 0}
+                    valueStyle={{ color: selectedModelMetrics.mae ? '#722ed1' : '#999' }}
                   />
+                  {!selectedModelMetrics.mae && (
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      Calculation failed
+                    </Text>
+                  )}
                 </Card>
               </Col>
               <Col span={12}>
                 <Card size="small">
                   <Statistic 
                     title="MAPE (%)" 
-                    value={selectedModelMetrics.mape} 
-                    precision={2}
-                    valueStyle={{ color: '#13c2c2' }}
+                    value={selectedModelMetrics.mape || 'N/A'} 
+                    precision={selectedModelMetrics.mape ? 2 : 0}
+                    valueStyle={{ color: selectedModelMetrics.mape ? '#13c2c2' : '#999' }}
                   />
+                  {!selectedModelMetrics.mape && (
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      May not be available
+                    </Text>
+                  )}
                 </Card>
               </Col>
             </Row>
+
+            {/* Show warning if metrics are missing */}
+            {(!selectedModelMetrics.r2_score || !selectedModelMetrics.rmse || !selectedModelMetrics.mae) && (
+              <Alert
+                message="Some Metrics Unavailable"
+                description="Some detailed metrics couldn't be calculated. This may happen when the model was trained with insufficient data or incompatible preprocessing. The basic model performance scores (shown in the main table) are still available."
+                type="warning"
+                showIcon
+                style={{ marginTop: 16, marginBottom: 16 }}
+              />
+            )}
 
             <Alert
               message="Metric Interpretations"

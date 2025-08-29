@@ -37,10 +37,6 @@ const Vehicles = () => {
   const [form] = Form.useForm();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadVehicles();
-  }, []);
-
   const loadVehicles = async () => {
     try {
       setLoading(true);
@@ -53,6 +49,10 @@ const Vehicles = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadVehicles();
+  }, []);
 
   const handleCreateEdit = async (values) => {
     try {

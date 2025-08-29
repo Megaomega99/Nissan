@@ -42,12 +42,6 @@ const ModelDetail = () => {
   const [trainingInProgress, setTrainingInProgress] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (id) {
-      loadModelDetails();
-    }
-  }, [id, loadModelDetails]);
-
   const loadModelDetails = useCallback(async () => {
     try {
       setLoading(true);
@@ -82,6 +76,12 @@ const ModelDetail = () => {
       setLoading(false);
     }
   }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      loadModelDetails();
+    }
+  }, [id, loadModelDetails]);
 
   const handleTrainModel = async () => {
     try {

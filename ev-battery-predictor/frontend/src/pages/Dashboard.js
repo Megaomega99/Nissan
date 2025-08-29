@@ -22,10 +22,6 @@ const Dashboard = () => {
   const [recentData, setRecentData] = useState([]);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
   const loadDashboardData = async () => {
     try {
       setLoading(true);
@@ -78,6 +74,10 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
 
   if (loading) {
     return (

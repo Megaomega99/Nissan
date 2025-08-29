@@ -528,42 +528,72 @@ async def get_model_metrics(
         else:
             model = model_data['model']
         
-        # Prepare test data (use last 20% of data)
-        test_size = max(2, len(df) // 5)
-        df_test = df.tail(test_size)
+        # Use the same data preparation as during training
+        trainer = ModelTrainer()
         
-        # Prepare features and target
-        feature_columns = ml_model.feature_columns or [
-            col for col in df.columns 
-            if col not in ['state_of_health', 'measurement_timestamp', 'id', 'vehicle_id', 'user_id', 'created_at', 'updated_at', 'data_source']
-        ]
-        
-        # Filter feature columns to only include those that exist in the data
-        available_features = [col for col in feature_columns if col in df.columns]
-        
-        if not available_features:
-            # Use default features that should be available
-            available_features = []
-            for col in ['state_of_charge', 'voltage', 'current', 'temperature', 'cycle_count', 'capacity_fade', 'internal_resistance']:
-                if col in df.columns:
-                    available_features.append(col)
-        
-        if not available_features:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No valid features found for metrics calculation"
+        try:
+            # Apply comprehensive preprocessing like during training
+            X_full, y_full, processed_features = trainer.prepare_data(
+                df, 
+                'state_of_health', 
+                ml_model.feature_columns
             )
-        
-        X_test = df_test[available_features].fillna(0)
-        y_test = df_test['state_of_health']
+            
+            # Use last 20% of processed data for testing
+            test_size = max(2, len(X_full) // 5)
+            X_test = X_full.tail(test_size)
+            y_test = y_full.tail(test_size)
+            
+            print(f"Using processed features for metrics: {processed_features}")
+            print(f"Test data shape: X={X_test.shape}, y={y_test.shape}")
+            
+        except Exception as prep_error:
+            print(f"Full preprocessing failed, falling back to simple approach: {prep_error}")
+            
+            # Fallback to simple preprocessing
+            test_size = max(2, len(df) // 5)
+            df_test = df.tail(test_size)
+            
+            # Prepare features and target
+            feature_columns = ml_model.feature_columns or [
+                col for col in df.columns 
+                if col not in ['state_of_health', 'measurement_timestamp', 'id', 'vehicle_id', 'user_id', 'created_at', 'updated_at', 'data_source']
+            ]
+            
+            # Filter feature columns to only include those that exist in the data
+            available_features = [col for col in feature_columns if col in df.columns]
+            
+            if not available_features:
+                # Use default features that should be available
+                available_features = []
+                for col in ['state_of_charge', 'voltage', 'current', 'temperature', 'cycle_count', 'capacity_fade', 'internal_resistance']:
+                    if col in df.columns:
+                        available_features.append(col)
+            
+            if not available_features:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="No valid features found for metrics calculation"
+                )
+            
+            X_test = df_test[available_features].fillna(0)
+            y_test = df_test['state_of_health']
         
         # Calculate metrics
         try:
-            metrics = calculate_model_metrics(model, X_test, y_test)
+            # Load scaler if the model needs it
+            scaler = None
+            if ml_model.model_type in ["svm", "sgd", "neural_network", "perceptron"]:
+                if ml_model.model_type not in ["rnn", "gru"] and 'scaler' in model_data:
+                    scaler = model_data['scaler']
+            
+            metrics = calculate_model_metrics(model, X_test, y_test, scaler)
             
             # Validate metrics before returning
             if 'error' in metrics:
-                raise ValueError(f"Metrics calculation error: {metrics['error']}")
+                print(f"Metrics calculation returned error: {metrics['error']}")
+                # Remove error from metrics before returning
+                metrics.pop('error', None)
                 
             return ModelMetricsResponse(
                 model_id=model_id,

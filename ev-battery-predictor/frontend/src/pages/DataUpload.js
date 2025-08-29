@@ -3,7 +3,6 @@ import {
   Typography,
   Card,
   Form,
-  Input,
   InputNumber,
   DatePicker,
   Select,
@@ -40,16 +39,6 @@ const DataUpload = () => {
   const [uploadMode, setUploadMode] = useState('manual'); // 'manual' or 'file'
   const [form] = Form.useForm();
 
-  useEffect(() => {
-    loadVehicles();
-  }, [loadVehicles]);
-
-  useEffect(() => {
-    if (selectedVehicle) {
-      loadRecentData();
-    }
-  }, [selectedVehicle, loadRecentData]);
-
   const loadVehicles = useCallback(async () => {
     try {
       const response = await vehicleAPI.getVehicles();
@@ -71,6 +60,16 @@ const DataUpload = () => {
       console.error('Failed to load recent data:', error);
     }
   }, [selectedVehicle]);
+
+  useEffect(() => {
+    loadVehicles();
+  }, [loadVehicles]);
+
+  useEffect(() => {
+    if (selectedVehicle) {
+      loadRecentData();
+    }
+  }, [selectedVehicle, loadRecentData]);
 
   const handleManualSubmit = async (values) => {
     try {
