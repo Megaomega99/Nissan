@@ -1,0 +1,125 @@
+# Environment files
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite3
+
+# ML Models
+models/
+*.pkl
+*.joblib
+*.h5
+*.pb
+
+# Uploads
+uploads/
+temp/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# React build
+build/
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Docker
+.dockerignore
+
+# SSL certificates
+ssl/
+*.pem
+*.crt
+*.key
+
+# Backup files
+*.backup
+*.bak
+*.sql
+
+# Jupyter
+.ipynb_checkpoints/
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Test files and scripts (additional rules)
+test_*.py
+test_*.sh
+test-*.ps1
+test_*.csv
+*test*.json
+STATUS_*.md
+TROUBLESHOOTING.md
+SOLUCION_PROBLEMAS.md
+docker-manage.ps1
+database/
+
+# Temporary documentation files
+*.tmp.md
+*.backup.md

@@ -1,0 +1,156 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Custom styles */
+.dashboard-card {
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  text-align: center;
+  padding: 20px;
+}
+
+.stat-value {
+  font-size: 2em;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.stat-label {
+  color: #666;
+  font-size: 0.9em;
+}
+
+.chart-container {
+  height: 300px;
+  margin: 20px 0;
+}
+
+.prediction-result {
+  background: #f5f5f5;
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.model-card {
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.model-card.trained {
+  border-color: #52c41a;
+  background: #f6ffed;
+}
+
+.model-card.training {
+  border-color: #1890ff;
+  background: #e6f7ff;
+}
+
+.upload-area {
+  border: 2px dashed #d9d9d9;
+  border-radius: 8px;
+  padding: 40px;
+  text-align: center;
+  background: #fafafa;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.upload-area:hover {
+  border-color: #1890ff;
+}
+
+.upload-area.dragover {
+  border-color: #1890ff;
+  background: #e6f7ff;
+}
+
+/* Loading states */
+.loading-card {
+  text-align: center;
+  padding: 50px 20px;
+}
+
+.loading-card .ant-spin {
+  margin-bottom: 16px;
+}
+
+/* Responsive chart container */
+@media (max-width: 768px) {
+  .chart-container {
+    height: 250px;
+  }
+}
+
+/* Model status indicators */
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.status-indicator.trained {
+  background-color: #52c41a;
+}
+
+.status-indicator.training {
+  background-color: #1890ff;
+  animation: pulse 1.5s infinite;
+}
+
+.status-indicator.error {
+  background-color: #ff4d4f;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+/* Threshold lines for predictions */
+.threshold-line {
+  stroke-dasharray: 5,5;
+  stroke-width: 2;
+}
+
+.threshold-line.critical {
+  stroke: #ff4d4f;
+}
+
+.threshold-line.warning {
+  stroke: #fa8c16;
+}
+
+.threshold-line.safe {
+  stroke: #52c41a;
+}
+
+/* Enhanced cards */
+.enhanced-card {
+  transition: all 0.3s ease;
+  border-radius: 8px;
+}
+
+.enhanced-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
